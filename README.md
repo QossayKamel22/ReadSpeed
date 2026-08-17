@@ -34,3 +34,16 @@ Dark, minimal, premium. Green (`#22E06F`) accents on a near-black background
 (`#070A09`), used sparingly for CTAs, progress, and active states. See
 `lib/core/theme/` for tokens and `lib/core/widgets/` for the shared component
 library (buttons, cards, progress bars, modals, nav).
+
+## Documentation
+
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — folder structure, state
+  management approach, how screens/modals/routing fit together
+- [`docs/FIREBASE_SETUP.md`](docs/FIREBASE_SETUP.md) — turning the Firebase
+  scaffold into a real backend (project setup, Firestore schema, auth wiring)
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — dev setup, pre-PR checklist, coding
+  conventions
+
+## License
+
+MIT — see [`LICENSE`](LICENSE).
