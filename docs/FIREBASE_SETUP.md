@@ -1,71 +1,266 @@
 # Firebase Setup
 
-The app already depends on `firebase_core`, `firebase_auth`, and
-`cloud_firestore` (see `pubspec.yaml`), and `main.dart` calls
-`Firebase.initializeApp()` inside a `try/catch` so the app runs fine on
-mock data even with no Firebase project configured. This doc covers
-turning that scaffold into a real backend.
+ReadSpeed uses Firebase as its backend infrastructure for authentication, user data, reading activity, and application persistence.
 
-## 1. Create a Firebase project
+The Firebase integration is designed around a user-scoped Firestore architecture, ensuring that each user's profile, library, reading progress, and reading sessions remain isolated and securely accessible.
 
-1. Go to the [Firebase console](https://console.firebase.google.com/)
-   and create a project (e.g. `readspeed-app`).
-2. Enable **Authentication** (Email/Password and/or Google Sign-In —
-   matches the "Sign in" button on the Onboarding screen).
-3. Enable **Cloud Firestore** in production mode.
+## 1. Firebase Project
 
-## 2. Install the FlutterFire CLI and configure
+Create a Firebase project from the [Firebase Console](https://console.firebase.google.com/) and configure the following services:
+
+* Firebase Authentication
+* Cloud Firestore
+
+The project should have the following platform applications configured:
+
+* Web
+* iOS
+* Android
+
+## 2. FlutterFire Configuration
+
+Install the FlutterFire CLI:
 
 ```bash
 dart pub global activate flutterfire_cli
+```
+
+Configure the Flutter project:
+
+```bash
 flutterfire configure
 ```
 
-This generates `lib/firebase_options.dart` and registers the
-web/iOS/Android apps in your Firebase project. It's gitignored-free by
-default — commit it, it contains public client config, not secrets.
+Select the ReadSpeed Firebase project and configure the supported platforms.
 
-Then update `main.dart`:
+This generates:
+
+```text
+lib/firebase_options.dart
+```
+
+The generated configuration contains Firebase client identifiers and is safe to include in the application repository. Firebase security is enforced through Authentication and Firestore Security Rules rather than by hiding client configuration.
+
+Initialize Firebase before starting the application:
 
 ```dart
-import 'firebase_options.dart';
-
 await Firebase.initializeApp(
   options: DefaultFirebaseOptions.currentPlatform,
 );
 ```
 
-## 3. Suggested Firestore schema
+## 3. Authentication
 
-```
+ReadSpeed uses Firebase Authentication to manage user identity and application access.
+
+The initial authentication flow supports:
+
+* Account registration
+* Email/password sign-in
+* Sign-out
+* Persistent authentication state
+* Authentication state restoration
+
+The application protects authenticated routes and prevents unauthenticated users from accessing private application data.
+
+Authentication state is managed through Firebase Auth and integrated with the existing GetX navigation architecture.
+
+## 4. Firestore Architecture
+
+ReadSpeed uses a user-scoped Firestore structure:
+
+```text
 users/{uid}
-  displayName, email, dailyGoalMinutes, dailyWpmTarget, defaultWpm,
-  premium: bool
-
-users/{uid}/books/{bookId}
-  title, author, type, progress, coverColor, category, pages, rating,
-  description, updatedAt
-
-users/{uid}/sessions/{sessionId}
-  bookId, wpm, accuracy, durationSeconds, wordsRead, createdAt
+├── books/{bookId}
+└── sessions/{sessionId}
 ```
 
-Statistics (`lib/modules/statistics`) can then be computed from
-`users/{uid}/sessions` instead of `MockData.wpmTrend` /
-`MockData.readingTimeTrend`.
+### User Profile
 
-## 4. Auth wiring
+```text
+users/{uid}
+```
 
-Replace the `Get Started` / `Sign in` handlers in
-`lib/modules/onboarding/onboarding_view.dart` with real
-`FirebaseAuth.instance` calls, and gate `AppRoutes.shell` behind an
-auth-state listener (e.g. a `StreamBuilder` on
-`FirebaseAuth.instance.authStateChanges()` in `main.dart`, or a
-`GetMiddleware` on the shell route).
+Stores account and reading preferences:
 
-## 5. Local dev without a live project
+```text
+uid
+displayName
+email
+dailyGoalMinutes
+dailyWpmTarget
+defaultWpm
+premium
+createdAt
+updatedAt
+```
 
-You don't need any of the above to run the app — `flutter run` works
-today against `MockData`. Treat Firebase as additive: wire up one
-collection at a time (start with `users/{uid}/books`) and fall back to
-mock data if a read fails, so the UI never breaks mid-migration.
+### Books
+
+```text
+users/{uid}/books/{bookId}
+```
+
+Stores the user's personal reading library:
+
+```text
+title
+author
+type
+progress
+coverColor
+category
+pages
+rating
+description
+lastPosition
+updatedAt
+```
+
+### Reading Sessions
+
+```text
+users/{uid}/sessions/{sessionId}
+```
+
+Stores completed reading sessions:
+
+```text
+bookId
+wpm
+accuracy
+durationSeconds
+wordsRead
+createdAt
+```
+
+## 5. Reading Progress
+
+Reading progress is persisted per user and per book.
+
+The application stores the latest reading position and progress so users can continue reading from their previous session.
+
+Progress updates are associated with the authenticated user's UID and are isolated from other users.
+
+## 6. Statistics
+
+Reading statistics are derived from persisted reading sessions rather than static application data.
+
+The Statistics module can calculate:
+
+* Average WPM
+* Reading time
+* Words read
+* Reading streak
+* WPM trends
+* Reading-time trends
+* Category distribution
+* Daily and weekly reading activity
+
+This allows statistics to reflect the user's actual reading history.
+
+## 7. Security
+
+Firestore data is protected using Firebase Authentication and Firestore Security Rules.
+
+Users should only be able to access documents belonging to their own UID.
+
+Conceptually:
+
+```text
+Authenticated user
+        ↓
+Firebase Authentication
+        ↓
+UID
+        ↓
+users/{uid}/...
+        ↓
+User-specific data
+```
+
+Firestore rules should reject unauthorized access to another user's profile, books, or reading sessions.
+
+Never use unrestricted rules such as:
+
+```text
+allow read, write: if true;
+```
+
+## 8. Application Architecture
+
+Firebase access is kept separate from the presentation layer.
+
+The application follows a layered approach:
+
+```text
+UI
+ ↓
+GetX Controllers
+ ↓
+Repositories
+ ↓
+Firebase Services
+ ↓
+Firebase Authentication / Cloud Firestore
+```
+
+This separation keeps Firebase-specific implementation details out of the UI and makes the application easier to maintain and extend.
+
+## 9. Environment Configuration
+
+Firebase client configuration is generated through FlutterFire and maintained per supported platform.
+
+Do not hard-code private credentials, service-account keys, or administrative Firebase credentials inside the Flutter application.
+
+Sensitive server-side credentials must never be included in the client application.
+
+## 10. Local Development
+
+Install project dependencies:
+
+```bash
+flutter pub get
+```
+
+Run the application:
+
+```bash
+flutter run
+```
+
+For Web:
+
+```bash
+flutter run -d chrome
+```
+
+For a connected mobile device or simulator:
+
+```bash
+flutter devices
+flutter run -d <device-id>
+```
+
+## 11. Firestore Data Principles
+
+The backend follows several core principles:
+
+* User data is scoped by authenticated UID.
+* Reading activity is persisted as individual sessions.
+* Book progress is stored independently from reading sessions.
+* Statistics are derived from historical reading activity.
+* Authentication controls access to private data.
+* Firestore Security Rules enforce data ownership.
+
+## 12. Future Extensions
+
+The Firebase architecture is designed to support future ReadSpeed features including:
+
+* Social sign-in providers
+* Cloud Functions
+* AI-powered reading insights
+* Personalized recommendations
+* Subscription and premium features
+* Cross-device synchronization
+* Advanced reading analytics
