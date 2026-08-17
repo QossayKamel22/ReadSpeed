@@ -1,6 +1,9 @@
 abstract class AppRoutes {
+  static const gate = '/';
   static const onboarding = '/onboarding';
-  static const shell = '/';
+  static const signIn = '/sign-in';
+  static const signUp = '/sign-up';
+  static const shell = '/shell';
   static const home = '/home';
   static const library = '/library';
   static const reader = '/reader';

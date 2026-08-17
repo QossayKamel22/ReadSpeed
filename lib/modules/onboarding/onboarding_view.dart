@@ -69,11 +69,11 @@ class OnboardingView extends StatelessWidget {
                     label: 'Get Started',
                     expand: true,
                     icon: Icons.arrow_forward_rounded,
-                    onTap: () => Get.offAllNamed(AppRoutes.shell),
+                    onTap: () => Get.toNamed(AppRoutes.signUp),
                   ),
                   const SizedBox(height: 14),
                   TextButton(
-                    onPressed: () => Get.offAllNamed(AppRoutes.shell),
+                    onPressed: () => Get.toNamed(AppRoutes.signIn),
                     child: Text('Sign in',
                         style: AppTextStyles.body.copyWith(
                             color: AppColors.textSecondary,
