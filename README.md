@@ -12,7 +12,7 @@ A premium AI-powered speed-reading and reading-productivity app built with Flutt
 
 ReadSpeed is an actively developed AI-powered reading platform.
 
-The current version includes the complete reading experience, responsive UI, library, speed reader, statistics, profile, and cross-platform Flutter architecture. Firebase integration and persistent user data are currently being prepared for the next development phase.
+The current version includes the complete reading experience, responsive UI, library, speed reader, statistics, profile, and cross-platform Flutter architecture, backed by a real Firebase project (`readspeed-app`) — Email/Password authentication and per-user Firestore data (profile, library, reading sessions, progress) are live, not mocked. See [`docs/FIREBASE_SETUP.md`](docs/FIREBASE_SETUP.md) for exactly what's wired up and its one known limitation (no real book-content import yet).
 
 ## ✨ Features
 
@@ -32,7 +32,7 @@ The current version includes the complete reading experience, responsive UI, lib
 * GetX — routing and state management
 * fl_chart — statistics charts
 * google_fonts — typography (Inter)
-* Firebase — authentication, Firestore, and backend integration
+* Firebase — Authentication (Email/Password) and Cloud Firestore, live against project `readspeed-app`
 * AI — intelligent reading and personalization features
 
 ## Screens
