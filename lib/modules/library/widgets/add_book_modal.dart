@@ -4,6 +4,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/app_modal.dart';
 import '../../../core/widgets/buttons.dart';
+import '../../../data/models/book.dart';
+import '../library_controller.dart';
 
 class AddBookModal extends StatefulWidget {
   const AddBookModal({super.key});
@@ -20,29 +22,65 @@ class _AddBookModalState extends State<AddBookModal> {
   int tab = 0;
   final titleCtrl = TextEditingController();
   final authorCtrl = TextEditingController();
+  final isSaving = false.obs;
   static const tabs = ['Book', 'PDF', 'Text'];
+  static const _types = [BookType.book, BookType.pdf, BookType.article];
+
+  Future<void> _submit() async {
+    if (isSaving.value) return;
+    if (titleCtrl.text.trim().isEmpty) {
+      Get.snackbar(
+        'Title required',
+        'Give your book a title before adding it.',
+        backgroundColor: AppColors.cardElevated,
+        colorText: AppColors.textPrimary,
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 14,
+      );
+      return;
+    }
+    isSaving.value = true;
+    try {
+      await Get.find<LibraryController>().addBook(
+        title: titleCtrl.text.trim(),
+        author: authorCtrl.text.trim().isEmpty ? 'Unknown author' : authorCtrl.text.trim(),
+        type: _types[tab],
+      );
+      Get.back();
+      Get.snackbar(
+        'Added to Library',
+        '${titleCtrl.text.trim()} was added successfully.',
+        backgroundColor: AppColors.cardElevated,
+        colorText: AppColors.textPrimary,
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 14,
+      );
+    } catch (_) {
+      isSaving.value = false;
+      Get.snackbar(
+        'Couldn\'t add book',
+        'Something went wrong. Please try again.',
+        backgroundColor: AppColors.cardElevated,
+        colorText: AppColors.textPrimary,
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 14,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return AppModal(
       title: 'Add Book',
       actions: [
-        PrimaryButton(
-          label: 'Add Book',
-          expand: true,
-          onTap: () {
-            Get.back();
-            Get.snackbar(
-              'Added to Library',
-              '${titleCtrl.text.isEmpty ? "New book" : titleCtrl.text} was added successfully.',
-              backgroundColor: AppColors.cardElevated,
-              colorText: AppColors.textPrimary,
-              snackPosition: SnackPosition.BOTTOM,
-              margin: const EdgeInsets.all(16),
-              borderRadius: 14,
-            );
-          },
-        ),
+        Obx(() => PrimaryButton(
+              label: isSaving.value ? 'Adding...' : 'Add Book',
+              expand: true,
+              onTap: isSaving.value ? null : _submit,
+            )),
       ],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

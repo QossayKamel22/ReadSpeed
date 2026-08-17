@@ -47,15 +47,15 @@ class ReaderView extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(c.book?.title ?? 'Reading',
-                            style: AppTextStyles.h3, textAlign: TextAlign.center),
-                        Text(c.book?.author ?? '',
-                            style: AppTextStyles.caption, textAlign: TextAlign.center),
-                      ],
-                    ),
+                    child: Obx(() => Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(c.book.value?.title ?? 'Pick a book to start',
+                                style: AppTextStyles.h3, textAlign: TextAlign.center),
+                            Text(c.book.value?.author ?? '',
+                                style: AppTextStyles.caption, textAlign: TextAlign.center),
+                          ],
+                        )),
                   ),
                   IconCircleButton(
                     icon: Icons.center_focus_strong_rounded,

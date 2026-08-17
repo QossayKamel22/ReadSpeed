@@ -7,7 +7,9 @@ import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/cards.dart';
 import '../../../core/widgets/progress_bar.dart';
 import '../../../data/models/book.dart';
+import '../../reader/reader_controller.dart';
 import '../../shell/shell_controller.dart';
+import '../library_controller.dart';
 
 class BookDetailsModal extends StatelessWidget {
   final Book book;
@@ -17,6 +19,20 @@ class BookDetailsModal extends StatelessWidget {
     return AppModal.show(context, BookDetailsModal(book: book));
   }
 
+  void _delete(BuildContext context) {
+    Get.back();
+    Get.find<LibraryController>().deleteBook(book.id);
+    Get.snackbar(
+      'Book removed',
+      '${book.title} was removed from your library.',
+      backgroundColor: AppColors.cardElevated,
+      colorText: AppColors.textPrimary,
+      snackPosition: SnackPosition.BOTTOM,
+      margin: const EdgeInsets.all(16),
+      borderRadius: 14,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppModal(
@@ -24,18 +40,22 @@ class BookDetailsModal extends StatelessWidget {
       actions: [
         Row(
           children: [
-            Expanded(
-              child: SecondaryButton(
-                label: 'Read Preview',
-                onTap: () => Get.back(),
-              ),
+            IconCircleButton(
+              icon: Icons.delete_outline_rounded,
+              iconColor: AppColors.danger,
+              onTap: () => _delete(context),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: PrimaryButton(
                 label: 'Start Reading',
                 onTap: () {
-                  Get.back();
+                  // Navigator.pop (not Get.back) — this fires alongside two
+                  // other Get.find() calls in the same tick, and Get.back()
+                  // was found to occasionally leave the sheet stuck open
+                  // when raced against a tab change on the shell.
+                  Navigator.of(context).pop();
+                  Get.find<ReaderController>().loadBook(book);
                   Get.find<ShellController>().goTo(2);
                 },
               ),

@@ -1,9 +1,16 @@
 import 'dart:async';
 import 'package:get/get.dart';
+
 import '../../data/mock/mock_data.dart';
 import '../../data/models/book.dart';
+import '../../data/repositories/book_repository.dart';
+import '../../data/repositories/session_repository.dart';
+import '../../data/services/auth_service.dart';
 
 class ReaderController extends GetxController {
+  final _bookRepo = BookRepository();
+  final _sessionRepo = SessionRepository();
+
   late List<String> words;
   final currentIndex = 0.obs;
   final wpm = 320.obs;
@@ -12,7 +19,7 @@ class ReaderController extends GetxController {
   Timer? _timer;
   Timer? _clock;
 
-  Book? book;
+  final Rxn<Book> book = Rxn<Book>();
 
   String fontChoice = 'Inter';
   String themeChoice = 'Dark';
@@ -22,7 +29,13 @@ class ReaderController extends GetxController {
   void onInit() {
     super.onInit();
     words = MockData.sampleParagraph.split(RegExp(r'\s+'));
-    book = MockData.continueReading;
+  }
+
+  /// Loads a book into the reader, resuming from its last saved position.
+  void loadBook(Book newBook) {
+    reset();
+    book.value = newBook;
+    currentIndex.value = newBook.lastPositionIndex.clamp(0, words.length - 1);
   }
 
   double get progress => words.isEmpty ? 0 : currentIndex.value / (words.length - 1);
@@ -38,6 +51,7 @@ class ReaderController extends GetxController {
       _startTimers();
     } else {
       _stopTimers();
+      _persistProgress();
     }
   }
 
@@ -59,6 +73,7 @@ class ReaderController extends GetxController {
       } else {
         isPlaying.value = false;
         _stopTimers();
+        _finishSession();
         onFinished?.call();
       }
     });
@@ -94,6 +109,33 @@ class ReaderController extends GetxController {
     isPlaying.value = false;
     currentIndex.value = 0;
     elapsedSeconds.value = 0;
+  }
+
+  Future<void> _persistProgress() async {
+    final uid = Get.find<AuthService>().uid;
+    final b = book.value;
+    if (uid == null || b == null) return;
+    await _bookRepo.updateProgress(
+      uid: uid,
+      bookId: b.id,
+      progress: progress,
+      lastPositionIndex: currentIndex.value,
+    );
+  }
+
+  Future<void> _finishSession() async {
+    final uid = Get.find<AuthService>().uid;
+    final b = book.value;
+    if (uid == null || b == null) return;
+    await _persistProgress();
+    await _sessionRepo.addSession(
+      uid: uid,
+      bookId: b.id,
+      wpm: wpm.value,
+      accuracy: 92,
+      durationSeconds: elapsedSeconds.value,
+      wordsRead: words.length,
+    );
   }
 
   @override

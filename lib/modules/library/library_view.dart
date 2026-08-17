@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/widgets/book_card.dart';
 import '../../core/widgets/buttons.dart';
@@ -57,11 +58,20 @@ class LibraryView extends StatelessWidget {
             const SizedBox(height: 18),
             Expanded(
               child: Obx(() {
+                if (c.isLoading.value) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: AppColors.green),
+                  );
+                }
                 final books = c.filteredBooks;
                 if (books.isEmpty) {
                   return Center(
-                    child: Text('No books found',
-                        style: AppTextStyles.bodySecondary),
+                    child: Text(
+                      c.books.isEmpty
+                          ? 'Your library is empty. Add your first book!'
+                          : 'No books found',
+                      style: AppTextStyles.bodySecondary,
+                    ),
                   );
                 }
                 return GridView.builder(
