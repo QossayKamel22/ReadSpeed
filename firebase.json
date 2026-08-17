@@ -1,0 +1,35 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "readspeed-app",
+          "appId": "1:498548828224:android:67c18a72c0b22f4d7117a5",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "readspeed-app",
+          "appId": "1:498548828224:ios:9281f3d9cf340d587117a5",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "readspeed-app",
+          "configurations": {
+            "android": "1:498548828224:android:67c18a72c0b22f4d7117a5",
+            "ios": "1:498548828224:ios:9281f3d9cf340d587117a5",
+            "web": "1:498548828224:web:0b9a5430d84e49227117a5"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  }
+}
