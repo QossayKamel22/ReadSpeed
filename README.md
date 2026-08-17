@@ -4,6 +4,7 @@
 
 <img width="1254" height="1254" alt="4D6FADEE-9EC6-46D3-8BAE-7D0B33137E38" src="https://github.com/user-attachments/assets/8e878761-b024-4937-8fab-26d32d3a5056" />  
 
+---
 
 A premium speed-reading and reading-productivity app built with Flutter + GetX.
 
