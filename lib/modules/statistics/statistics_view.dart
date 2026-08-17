@@ -5,7 +5,6 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/widgets/cards.dart';
 import '../../core/widgets/inputs.dart';
-import '../../data/mock/mock_data.dart';
 import 'statistics_controller.dart';
 
 class StatisticsView extends StatelessWidget {
@@ -19,105 +18,143 @@ class StatisticsView extends StatelessWidget {
     final overviewCols = width >= 700 ? 4 : 2;
 
     return SafeArea(
-      child: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(isDesktop ? 32 : 18, isDesktop ? 28 : 18,
-            isDesktop ? 32 : 18, 28),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1100),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Statistics', style: AppTextStyles.h1),
-              const SizedBox(height: 18),
-              Obx(() => FilterTabs(
-                    options: StatisticsController.periods,
-                    selected: c.period.value,
-                    onSelected: (v) => c.period.value = v,
-                  )),
-              const SizedBox(height: 20),
-              GridView.count(
-                crossAxisCount: overviewCols,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 1.5,
-                children: const [
-                  StatCard(label: 'Avg WPM', value: '320', delta: '+12%'),
-                  StatCard(label: 'Total Minutes', value: '1,240', delta: '+8%'),
-                  StatCard(label: 'Words Read', value: '245K', delta: '+15%'),
-                  StatCard(label: 'Sessions', value: '28', delta: '+4%'),
-                ],
-              ),
-              const SizedBox(height: 20),
-              ChartCard(
-                title: 'WPM Progress',
-                chart: SizedBox(height: 180, child: _wpmChart()),
-              ),
-              const SizedBox(height: 16),
-              ChartCard(
-                title: 'Reading Time',
-                chart: SizedBox(height: 180, child: _readingTimeChart()),
-              ),
-              const SizedBox(height: 16),
-              LayoutBuilder(builder: (context, constraints) {
-                final wide = constraints.maxWidth > 700;
-                final categories = ChartCard(
-                  title: 'Categories',
-                  chart: _categoriesChart(),
-                );
-                final streak = AppCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Best Streak', style: AppTextStyles.caption),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          const Icon(Icons.local_fire_department_rounded,
-                              color: Color(0xFFE0A83B), size: 40),
-                          const SizedBox(width: 10),
-                          Text('21', style: AppTextStyles.numberLarge.copyWith(fontSize: 44)),
-                          const SizedBox(width: 6),
-                          Padding(
-                            padding: const EdgeInsets.only(top: 14),
-                            child: Text('days', style: AppTextStyles.bodySecondary),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text('Keep it going — current streak: 7 days',
-                          style: AppTextStyles.bodySecondary),
-                    ],
+      child: Obx(() {
+        if (c.isLoading.value) {
+          return const Center(child: CircularProgressIndicator(color: AppColors.green));
+        }
+        if (c.sessions.isEmpty) {
+          return SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+                isDesktop ? 32 : 18, isDesktop ? 28 : 18, isDesktop ? 32 : 18, 28),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Statistics', style: AppTextStyles.h1),
+                const SizedBox(height: 40),
+                Center(
+                  child: Text(
+                    'No reading sessions yet.\nFinish a session in the Reader to see your stats here.',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.bodySecondary,
                   ),
-                );
-                if (wide) {
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+              ],
+            ),
+          );
+        }
+
+        return SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(isDesktop ? 32 : 18, isDesktop ? 28 : 18,
+              isDesktop ? 32 : 18, 28),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1100),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Statistics', style: AppTextStyles.h1),
+                const SizedBox(height: 18),
+                FilterTabs(
+                  options: StatisticsController.periods,
+                  selected: c.period.value,
+                  onSelected: (v) => c.period.value = v,
+                ),
+                const SizedBox(height: 20),
+                GridView.count(
+                  crossAxisCount: overviewCols,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 1.5,
+                  children: [
+                    StatCard(label: 'Avg WPM', value: '${c.avgWpm}'),
+                    StatCard(label: 'Total Minutes', value: '${c.totalMinutes}'),
+                    StatCard(label: 'Words Read', value: _formatCount(c.totalWordsRead)),
+                    StatCard(label: 'Sessions', value: '${c.sessionCount}'),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                ChartCard(
+                  title: 'WPM Progress',
+                  chart: SizedBox(height: 180, child: _wpmChart(c.wpmTrend)),
+                ),
+                const SizedBox(height: 16),
+                ChartCard(
+                  title: 'Reading Time',
+                  chart: SizedBox(height: 180, child: _readingTimeChart(c.readingTimeTrend)),
+                ),
+                const SizedBox(height: 16),
+                LayoutBuilder(builder: (context, constraints) {
+                  final wide = constraints.maxWidth > 700;
+                  final breakdown = c.categoryBreakdown;
+                  final categories = ChartCard(
+                    title: 'Categories',
+                    chart: breakdown.isEmpty
+                        ? Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 24),
+                            child: Text('No categorized sessions yet.',
+                                style: AppTextStyles.bodySecondary),
+                          )
+                        : _categoriesChart(breakdown),
+                  );
+                  final streak = AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Best Streak', style: AppTextStyles.caption),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            const Icon(Icons.local_fire_department_rounded,
+                                color: Color(0xFFE0A83B), size: 40),
+                            const SizedBox(width: 10),
+                            Text('${c.bestStreakDays}',
+                                style: AppTextStyles.numberLarge.copyWith(fontSize: 44)),
+                            const SizedBox(width: 6),
+                            Padding(
+                              padding: const EdgeInsets.only(top: 14),
+                              child: Text('days', style: AppTextStyles.bodySecondary),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text('Keep it going — current streak: ${c.currentStreakDays} days',
+                            style: AppTextStyles.bodySecondary),
+                      ],
+                    ),
+                  );
+                  if (wide) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: categories),
+                        const SizedBox(width: 16),
+                        Expanded(child: streak),
+                      ],
+                    );
+                  }
+                  return Column(
                     children: [
-                      Expanded(child: categories),
-                      const SizedBox(width: 16),
-                      Expanded(child: streak),
+                      categories,
+                      const SizedBox(height: 16),
+                      streak,
                     ],
                   );
-                }
-                return Column(
-                  children: [
-                    categories,
-                    const SizedBox(height: 16),
-                    streak,
-                  ],
-                );
-              }),
-            ],
+                }),
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      }),
     );
   }
 
-  Widget _wpmChart() {
-    final data = MockData.wpmTrend;
+  String _formatCount(int value) {
+    if (value >= 1000) return '${(value / 1000).toStringAsFixed(value >= 10000 ? 0 : 1)}K';
+    return '$value';
+  }
+
+  Widget _wpmChart(List<double> data) {
     return LineChart(
       LineChartData(
         gridData: const FlGridData(show: false),
@@ -149,15 +186,15 @@ class StatisticsView extends StatelessWidget {
     );
   }
 
-  Widget _readingTimeChart() {
-    final data = MockData.readingTimeTrend;
+  Widget _readingTimeChart(List<double> data) {
+    final maxVal = data.isEmpty ? 1.0 : data.reduce((a, b) => a > b ? a : b);
     return BarChart(
       BarChartData(
         gridData: const FlGridData(show: false),
         titlesData: const FlTitlesData(show: false),
         borderData: FlBorderData(show: false),
         barTouchData: BarTouchData(enabled: false),
-        maxY: (data.reduce((a, b) => a > b ? a : b)) + 15,
+        maxY: maxVal + 15,
         barGroups: [
           for (int i = 0; i < data.length; i++)
             BarChartGroupData(x: i, barRods: [
@@ -168,7 +205,7 @@ class StatisticsView extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
                 backDrawRodData: BackgroundBarChartRodData(
                   show: true,
-                  toY: (data.reduce((a, b) => a > b ? a : b)) + 15,
+                  toY: maxVal + 15,
                   color: AppColors.cardElevated,
                 ),
               ),
@@ -178,8 +215,8 @@ class StatisticsView extends StatelessWidget {
     );
   }
 
-  Widget _categoriesChart() {
-    final entries = MockData.categoryBreakdown.entries.toList();
+  Widget _categoriesChart(Map<String, double> breakdown) {
+    final entries = breakdown.entries.toList();
     final colors = [
       AppColors.green,
       AppColors.greenBright,
